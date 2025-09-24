@@ -21,65 +21,195 @@ import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-  TrendingUp,
-  Activity,
-  DollarSign,
-  BarChart3,
-  Settings,
-  Play,
-  Pause,
-  Plus,
-  Trash2,
-  Copy,
-  ArrowRight,
-  Target,
-  Shield,
-  Calendar,
-  Clock,
-  Zap,
-  Wallet,
-  AlertCircle,
-  CheckCircle,
-  Link,
-  Unlink,
-  AlertTriangle,
-  Lock,
-} from "lucide-react"
+  import {
+    TrendingUp,
+    Activity,
+    DollarSign,
+    BarChart3,
+    Settings,
+    Play,
+    Pause,
+    Plus,
+    Trash2,
+    Copy,
+    ArrowRight,
+    Target,
+    Shield,
+    Calendar,
+    Clock,
+    Zap,
+    Wallet,
+    AlertCircle,
+    CheckCircle,
+    Link,
+    Unlink,
+    AlertTriangle,
+    Lock,
+  } from "lucide-react"
+
+  // Types
+  type ConditionType = "entry" | "exit"
+  interface StrategyCondition {
+    id: number
+    type: ConditionType
+    indicator: string
+    condition: string
+    value: string
+  }
+
+  interface RiskSettings {
+    maxDailyLoss: number
+    maxPositionSize: number
+    enableStopLoss: boolean
+    emergencyStop: boolean
+  }
+
+  interface PaperPortfolio {
+    cash: number
+    totalValue: number
+    dayPnL: number
+    totalPnL: number
+  }
+
+  interface Position {
+    symbol: string
+    shares: number
+    avgPrice: number
+    currentPrice: number
+    pnl: number
+    pnlPercent: number
+  }
+
+  interface OrderHistoryItem {
+    id: number
+    symbol: string
+    type: "BUY" | "SELL"
+    shares: number
+    price: number
+    time: string
+    status: "Filled" | "Pending" | string
+  }
+
+  interface LiveAccount {
+    cash: number
+    totalValue: number
+    dayPnL: number
+    totalPnL: number
+    buyingPower: number
+  }
+
+  interface LiveStrategy {
+    id: number
+    name: string
+    status: "Active" | "Paused" | string
+    allocated: number
+    pnl: number
+    trades: number
+  }
+
+  interface StrategyRecord {
+    id: number
+    name: string
+    description?: string
+    status: "active" | "paused" | "draft" | string
+    entry_conditions?: StrategyCondition[]
+    exit_conditions?: StrategyCondition[]
+    created_at?: string
+  }
+
+  interface BacktestTrade {
+    symbol: string
+    action: "BUY" | "SELL"
+    price: number
+    date: string
+    pnl: number
+    status: "Win" | "Loss" | string
+  }
+
+  interface BacktestResults {
+    totalReturn: number
+    sharpeRatio: number
+    maxDrawdown: number
+    winRate: number
+    totalTrades: number
+    profitFactor: number
+    avgWin: number
+    avgLoss: number
+    trades: BacktestTrade[]
+  }
+
+  interface BacktestRecord {
+    id: number
+    name: string
+    strategy_id: number | null
+    start_date: string
+    end_date: string
+    initial_capital: number
+    commission: number
+    status: "running" | "completed" | string
+    results?: BacktestResults
+    created_at?: string
+  }
+
+  interface TradeRecord {
+    id: number
+    symbol: string
+    side: "buy" | "sell" | string
+    quantity: number
+    price: number
+    trade_type: string
+    created_at?: string
+  }
+
+  interface StrategyInput {
+    name?: string
+    description?: string
+    stopLoss?: number
+    takeProfit?: number
+    positionSize?: number
+    status?: string
+  }
+
+  interface OrderInput {
+    symbol: string
+    type: "BUY" | "SELL"
+    shares: number
+    price: number
+  }
 
 export default function TradingDashboard() {
-  const [activeTab, setActiveTab] = useState("dashboard")
-  const [showStrategyBuilder, setShowStrategyBuilder] = useState(false)
-  const [showOrderDialog, setShowOrderDialog] = useState(false)
-  const [showBrokerDialog, setShowBrokerDialog] = useState(false)
-  const [strategyConditions, setStrategyConditions] = useState([
+  const [activeTab, setActiveTab] = useState<string>("dashboard")
+  const [showStrategyBuilder, setShowStrategyBuilder] = useState<boolean>(false)
+  const [showOrderDialog, setShowOrderDialog] = useState<boolean>(false)
+  const [showBrokerDialog, setShowBrokerDialog] = useState<boolean>(false)
+  const [strategyConditions, setStrategyConditions] = useState<StrategyCondition[]>([
     { id: 1, type: "entry", indicator: "RSI", condition: "crosses_below", value: "30" },
   ])
-  const [backtestRunning, setBacktestRunning] = useState(false)
-  const [backtestProgress, setBacktestProgress] = useState(0)
-  const [backtestResults, setBacktestResults] = useState(null)
+  const [backtestRunning, setBacktestRunning] = useState<boolean>(false)
+  const [backtestProgress, setBacktestProgress] = useState<number>(0)
+  const [backtestResults, setBacktestResults] = useState<BacktestResults | null>(null)
 
-  const [paperPortfolio, setPaperPortfolio] = useState({
+  const [paperPortfolio, setPaperPortfolio] = useState<PaperPortfolio>({
     cash: 100000,
     totalValue: 102450.75,
     dayPnL: 1245.5,
     totalPnL: 2450.75,
   })
 
-  const [positions, setPositions] = useState([
+  const [positions, setPositions] = useState<Position[]>([
     { symbol: "AAPL", shares: 50, avgPrice: 175.23, currentPrice: 178.45, pnl: 161.0, pnlPercent: 1.84 },
     { symbol: "TSLA", shares: 25, avgPrice: 245.89, currentPrice: 242.67, pnl: -80.5, pnlPercent: -1.31 },
     { symbol: "NVDA", shares: 10, avgPrice: 892.34, currentPrice: 915.78, pnl: 234.4, pnlPercent: 2.63 },
   ])
 
-  const [orderHistory, setOrderHistory] = useState([
+  const [orderHistory, setOrderHistory] = useState<OrderHistoryItem[]>([
     { id: 1, symbol: "AAPL", type: "BUY", shares: 25, price: 175.23, time: "10:30 AM", status: "Filled" },
     { id: 2, symbol: "TSLA", type: "SELL", shares: 10, price: 245.89, time: "11:15 AM", status: "Filled" },
     { id: 3, symbol: "NVDA", type: "BUY", shares: 5, price: 892.34, time: "2:45 PM", status: "Pending" },
   ])
 
-  const [brokerConnected, setBrokerConnected] = useState(false)
-  const [liveAccount, setLiveAccount] = useState({
+  const [brokerConnected, setBrokerConnected] = useState<boolean>(false)
+  const [liveAccount, setLiveAccount] = useState<LiveAccount>({
     cash: 25000,
     totalValue: 28450.75,
     dayPnL: 345.5,
@@ -87,28 +217,28 @@ export default function TradingDashboard() {
     buyingPower: 50000,
   })
 
-  const [liveStrategies, setLiveStrategies] = useState([
+  const [liveStrategies, setLiveStrategies] = useState<LiveStrategy[]>([
     { id: 1, name: "RSI Momentum", status: "Active", allocated: 5000, pnl: 234.56, trades: 12 },
     { id: 2, name: "Mean Reversion", status: "Paused", allocated: 3000, pnl: -45.23, trades: 8 },
   ])
 
-  const [riskSettings, setRiskSettings] = useState({
+  const [riskSettings, setRiskSettings] = useState<RiskSettings>({
     maxDailyLoss: 1000,
     maxPositionSize: 10000,
     enableStopLoss: true,
     emergencyStop: false,
   })
 
-  const [strategies, setStrategies] = useState([])
-  const [backtests, setBacktests] = useState([])
-  const [trades, setTrades] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [strategies, setStrategies] = useState<StrategyRecord[]>([])
+  const [backtests, setBacktests] = useState<BacktestRecord[]>([])
+  const [trades, setTrades] = useState<TradeRecord[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
 
   useEffect(() => {
     loadData()
   }, [])
 
-  const loadData = async () => {
+  const loadData = async (): Promise<void> => {
     try {
       // Load strategies
       const { data: strategiesData } = await supabase
@@ -129,9 +259,9 @@ export default function TradingDashboard() {
         .order("created_at", { ascending: false })
         .limit(10)
 
-      setStrategies(strategiesData || [])
-      setBacktests(backtestsData || [])
-      setTrades(tradesData || [])
+      setStrategies((strategiesData as unknown as StrategyRecord[]) || [])
+      setBacktests((backtestsData as unknown as BacktestRecord[]) || [])
+      setTrades((tradesData as unknown as TradeRecord[]) || [])
     } catch (error) {
       console.error("Error loading data:", error)
     } finally {
@@ -139,7 +269,7 @@ export default function TradingDashboard() {
     }
   }
 
-  const addCondition = (type) => {
+  const addCondition = (type: ConditionType) => {
     const newCondition = {
       id: Date.now(),
       type,
@@ -150,17 +280,21 @@ export default function TradingDashboard() {
     setStrategyConditions([...strategyConditions, newCondition])
   }
 
-  const updateCondition = (id, field, value) => {
+  const updateCondition = (
+    id: number,
+    field: keyof Pick<StrategyCondition, "indicator" | "condition" | "value" | "type">,
+    value: string | ConditionType,
+  ) => {
     setStrategyConditions(
       strategyConditions.map((condition) => (condition.id === id ? { ...condition, [field]: value } : condition)),
     )
   }
 
-  const removeCondition = (id) => {
+  const removeCondition = (id: number) => {
     setStrategyConditions(strategyConditions.filter((condition) => condition.id !== id))
   }
 
-  const saveStrategy = async (strategyData) => {
+  const saveStrategy = async (strategyData: StrategyInput) => {
     try {
       const { data, error } = await supabase
         .from("strategies")
@@ -188,7 +322,8 @@ export default function TradingDashboard() {
       return data[0]
     } catch (error) {
       console.error("[v0] Error saving strategy:", error)
-      alert("Error saving strategy: " + error.message)
+      const message = error instanceof Error ? error.message : String(error)
+      alert("Error saving strategy: " + message)
     }
   }
 
@@ -242,7 +377,7 @@ export default function TradingDashboard() {
             { symbol: "TSLA", action: "SELL", price: 245.89, date: "2024-01-16", pnl: -23.45, status: "Loss" },
             { symbol: "NVDA", action: "BUY", price: 892.34, date: "2024-01-17", pnl: 123.45, status: "Win" },
           ],
-        }
+        } as BacktestResults
 
         // Update backtest with results
         await supabase
@@ -262,11 +397,12 @@ export default function TradingDashboard() {
     } catch (error) {
       console.error("[v0] Error running backtest:", error)
       setBacktestRunning(false)
-      alert("Error running backtest: " + error.message)
+      const message = error instanceof Error ? error.message : String(error)
+      alert("Error running backtest: " + message)
     }
   }
 
-  const executeOrder = async (orderData) => {
+  const executeOrder = async (orderData: OrderInput) => {
     try {
       const { data, error } = await supabase
         .from("trades")
@@ -296,7 +432,7 @@ export default function TradingDashboard() {
         price: orderData.price,
         time: new Date().toLocaleTimeString(),
         status: "Filled",
-      }
+      } as OrderHistoryItem
 
       setOrderHistory([newOrder, ...orderHistory])
       setShowOrderDialog(false)
@@ -314,7 +450,8 @@ export default function TradingDashboard() {
       loadData()
     } catch (error) {
       console.error("[v0] Error executing order:", error)
-      alert("Error executing order: " + error.message)
+      const message = error instanceof Error ? error.message : String(error)
+      alert("Error executing order: " + message)
     }
   }
 
@@ -329,11 +466,12 @@ export default function TradingDashboard() {
       }, 2000)
     } catch (error) {
       console.error("[v0] Error connecting broker:", error)
-      alert("Error connecting broker: " + error.message)
+      const message = error instanceof Error ? error.message : String(error)
+      alert("Error connecting broker: " + message)
     }
   }
 
-  const deployStrategy = async (strategyId) => {
+  const deployStrategy = async (strategyId: number) => {
     try {
       const strategy = liveStrategies.find((s) => s.id === strategyId)
       if (!strategy) return
@@ -350,7 +488,8 @@ export default function TradingDashboard() {
       loadData()
     } catch (error) {
       console.error("[v0] Error deploying strategy:", error)
-      alert("Error updating strategy: " + error.message)
+      const message = error instanceof Error ? error.message : String(error)
+      alert("Error updating strategy: " + message)
     }
   }
 
@@ -478,7 +617,7 @@ export default function TradingDashboard() {
                         <p className="font-medium">${trade.price}</p>
                         <p className="text-sm text-green-600">+$45.67</p>
                       </div>
-                      <p className="text-xs text-muted-foreground">{new Date(trade.created_at).toLocaleTimeString()}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(trade.created_at ?? Date.now()).toLocaleTimeString()}</p>
                     </div>
                   ))}
                   {trades.length === 0 && (
@@ -792,7 +931,7 @@ export default function TradingDashboard() {
                       </div>
                       <div>
                         <p className="text-muted-foreground">Created</p>
-                        <p className="font-medium">{new Date(strategy.created_at).toLocaleDateString()}</p>
+                        <p className="font-medium">{new Date(strategy.created_at ?? Date.now()).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -853,7 +992,7 @@ export default function TradingDashboard() {
                         </SelectTrigger>
                         <SelectContent>
                           {strategies.map((strategy) => (
-                            <SelectItem key={strategy.id} value={strategy.id}>
+                            <SelectItem key={strategy.id} value={String(strategy.id)}>
                               {strategy.name}
                             </SelectItem>
                           ))}
